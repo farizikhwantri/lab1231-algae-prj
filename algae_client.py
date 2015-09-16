@@ -11,7 +11,6 @@ from config import *
 from crontab import CronTab
 
 #url_test = "http://localhost:5000/node/"
-#hostname = socket.gethostname()
 
 def get_config(dest):
 	request_url = urlparse.urljoin(dest,hostname)
@@ -20,7 +19,7 @@ def get_config(dest):
 	return res_stat.json
 
 def post_data(postdata, dest):
-	request_url = dest + hostname
+	request_url = urlparse.urljoin(dest,hostname)
 	r = requests.post(request_url,data=None,json=postdata)
 	if r.Response == 200:
 		print "OK"

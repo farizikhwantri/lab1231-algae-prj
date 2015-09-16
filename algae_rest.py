@@ -15,7 +15,7 @@ def home_index():
 	return render_template('index_node.html',node=nodes_list)
 
 @app.route('/sensor/<node>',methods=['POST','PUT'])
-def write_data():
+def write_node():
 	if request.method == 'POST':
 		return True
 	elif request.method == 'PUT':
@@ -26,17 +26,33 @@ def write_data():
 def read_node():
 	return True
 
-def send_to_node():
-	return True
+@app.route('/temperature',method=['GET'])
+def get_temperature():
+	pass
+
+@app.route('/humidity',method=['GET'])
+def get_humidity():
+        pass
+
+@app.route('/lightintensity',method=['GET'])
+def get_light_intensity():
+        pass
+
+@app.route('/carbondioxide',method=['GET'])
+def get_CO2():
+        pass
+
+def config_node():
+	pass
 
 def view_node():
-	return True:
+	pass
 
 def query_node():
-	return True:
+	pass
 
 def store_data():
-	return True:
+	pass
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
