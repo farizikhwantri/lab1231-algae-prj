@@ -5,15 +5,16 @@ import time
 import socket
 import pymongo
 import sys
+import urlparse
 
 from config import *
 from crontab import CronTab
 
-#url_test = "http://localhost:5000/conf/"
+#url_test = "http://localhost:5000/node/"
 #hostname = socket.gethostname()
 
 def get_config(dest):
-	request_url = dest + hostname
+	request_url = urlparse.urljoin(dest,hostname)
 	r = requests.get(request_url)
 	res_stat = write_config(r.json)
 	return res_stat.json

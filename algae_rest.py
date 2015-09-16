@@ -2,13 +2,17 @@ import pymongo
 from flask import Flask
 from flask import make_response
 from config import *
+from bson.json_util import dumps
 
 app = Flask(__name__)
-db = db_config('config.d/server.cfg')
+connection, dbname = db_config('config.d/server.cfg')
+db = connection[dbname]
 
 @app.route('/')
 def home_index():
-	return render_template('index_node.html')
+	nodes = db.find()
+	nodes_list = dumps(node)
+	return render_template('index_node.html',node=nodes_list)
 
 @app.route('/sensor/<node>',methods=['POST','PUT'])
 def write_data():

@@ -10,8 +10,9 @@ def config_db(file_config):
 	db_conf.read(os.path.join(BASE_DIR,file_config))
 	db_address = db_conf.get('mongodb','address')
 	db_port = db_conf.get('mongodb','port')
+	db_name = db_conf.get('mongodb','dbname')
 	client = MongoClient(db_address,db_port)
-	return client
+	return client, db_name
 
 def config_device(argv):
 	return True
