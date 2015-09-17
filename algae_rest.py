@@ -12,7 +12,8 @@ db = connection[dbname]
 def home_index():
 	nodes = db.find()
 	nodes_list = dumps(node)
-	return render_template('index_node.html',node=nodes_list)
+	return render_template('index_node.html',
+		node = nodes_list)
 
 @app.route('/sensor/<node>',methods=['POST','PUT'])
 def write_node():

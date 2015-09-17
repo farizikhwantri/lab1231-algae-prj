@@ -14,7 +14,7 @@ threshold = 10
 grovepi.pinMode(light_sensor,"INPUT")
 grovepi.pinMode(dht_sensor,"INPUT")
 
-def light_sensor():
+def run_light_sensor():
 	light_sense = grovepi.analogRead(light_sensor)	
 	resistance = (float)(1023 - light_sense) * 10 / light_sense
 	if resistance > threshold:
@@ -23,7 +23,7 @@ def light_sensor():
 	return light_sense, resistance
 
 
-def temp_humid_sensor():
+def run_temp_humid_sensor():
 	[temp,hum] = grovepi.dht(dht_sensor,1)
 	#print "temperature_value = ", temp, " humidity =  ", hum
 	return temp, hum
@@ -46,8 +46,8 @@ if __name__ == '__main__':
 	original_sigint = signal.getsignal(signal.SIGINT)
 	signal.signal(signal.SIGINT, exit_gracefully)
 	while True:
-		ls,r = light_sensor()
-		t,h = temp_humid_sensor()
+		ls , r = run_light_sensor()
+		t , h = run_temp_humid_sensor()
 		print "light : ", ls, "resistance ", r
 		print "temperature : ", t, "humidity ", h
 		time.sleep(5)

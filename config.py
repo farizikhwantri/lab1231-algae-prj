@@ -1,4 +1,5 @@
 import os
+from bson.json_util import dumps
 from pymongo import MongoClient
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -14,8 +15,14 @@ def config_db(file_config):
 	client = MongoClient(db_address,db_port)
 	return client, db_name
 
-def config_device(argv):
-	return True
+def config_device(file_config):
+	nodes_conf = ConfigParser.ConfigParser()
+	nodes_list = nodes_conf.sections()
+	nodes = {}
+	for node in nodes_list:
+		for attr in nodes_conf.options(node):
+			nodes[attr] = nodes_conf.get(node,attr)
+	return dumps(nodes)
 
 def config_schedule(argv):
 	return True
