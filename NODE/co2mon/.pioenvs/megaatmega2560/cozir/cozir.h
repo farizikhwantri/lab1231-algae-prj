@@ -71,6 +71,7 @@ public:
     uint16_t CalibrateManual(uint16_t );
     uint16_t SetSpanCalibrate(uint16_t );
     uint16_t GetSpanCalibrate();
+    uint16_t ReadAutoCalibration();
 
     void SetDigiFilter(uint8_t );
     uint8_t GetDigiFilter();

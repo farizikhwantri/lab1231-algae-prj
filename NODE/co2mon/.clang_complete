@@ -4,6 +4,7 @@
 -ID:\01 - Academic\Fasilkom\Term 8\Tugas Akhir\src\co2mon\lib\FreeRTOS_AVR\src\utility
 -IC:\Users\Arshad\.platformio\packages\framework-arduinoavr\libraries\SoftwareSerial
 -ID:\01 - Academic\Fasilkom\Term 8\Tugas Akhir\src\co2mon\lib\cozir
+-IC:\Users\Arshad\.platformio\lib\Time_ID44
 -IC:\Users\Arshad\.platformio\packages\framework-arduinoavr\libraries\Audio\src
 -IC:\Users\Arshad\.platformio\packages\framework-arduinoavr\libraries\Bridge\src
 -IC:\Users\Arshad\.platformio\packages\framework-arduinoavr\libraries\EEPROM
@@ -36,5 +37,5 @@
 -DARDUINO_ARCH_AVR
 -DARDUINO_AVR_MEGA2560
 -DARDUINO=10607
--DPLATFORMIO=020804
+-DPLATFORMIO=020805
 -D__AVR_ATmega2560__

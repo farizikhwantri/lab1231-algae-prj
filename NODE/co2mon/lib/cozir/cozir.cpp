@@ -157,6 +157,11 @@ uint16_t COZIR::CalibrateNitrogen()
     return Request("U");
 }
 
+uint16_t COZIR::ReadAutoCalibration()
+{
+    return Request("@");
+}
+
 
 uint16_t COZIR::CalibrateKnownGas(uint16_t value)
 {
