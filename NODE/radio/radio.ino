@@ -147,8 +147,12 @@ static void vTaskRoute(void* pvParam)
       if (!radio.available())
       {
         // kalau nggak, kirim paketnya sekarang
+        // rawan chaos: tambahkan mutex di sini
+        while(xSemaphoreTake(&sem_pckt, 0))
+          ;
         pckt.addr_s = addr_saya;
         pckt.addr_t = ADDR_SINK;
+        xSemaphoreGive(&sem_pckt);
         kirim_paket(&pckt);
       }
       else
