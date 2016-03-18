@@ -1,14 +1,15 @@
 import os, sys
 import traceback
-import time, sleep
+from time import sleep
 import pymongo
+import serial
 from flask import Flask
 from flask import make_response
 from config import *
 from bson.json_util import dumps
 
 app = Flask(__name__)
-connection, dbname = db_config('config.d/server.cfg')
+connection, dbname = config_db('config.d/server.cfg')
 db = connection[dbname]
 
 CURRENTDIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,12 +23,12 @@ def wsErrorTextHTML(txt):
     err += "<pre>"+ txt + "</pre>"
     return err
 
-@application.errorhandler(500)
-def internalServerError(error): 
-    err = "<p>ERROR! 500</p>"
-    err += "<pre>"+ str(error) + "</pre>"
-    err += "<pre>"+ str(traceback.format_exc()) + "</pre>"
-    return err
+#@application.errorhandler(500)
+#def internalServerError(error): 
+#    err = "<p>ERROR! 500</p>"
+#    err += "<pre>"+ str(error) + "</pre>"
+#    err += "<pre>"+ str(traceback.format_exc()) + "</pre>"
+#    return err
 
 
 @app.route('/')
@@ -52,29 +53,29 @@ def index():
 
 @app.route('/sensor/<node>',methods=['POST','PUT'])
 def write_node():
-	if request.method == 'POST':
+	if request.methods == 'POST':
 		return True
-	elif request.method == 'PUT':
+	elif request.methods == 'PUT':
 		return True
 	return False
 
-@app.route('/sensor/<node>',method=['GET','POST'])
+@app.route('/sensor/<node>',methods=['GET','POST'])
 def read_node():
 	return True
 
-@app.route('/temperature',method=['GET','POST'])
+@app.route('/temperature',methods=['GET','POST'])
 def get_temperature():
 	pass
 
-@app.route('/humidity',method=['GET','POST'])
+@app.route('/humidity',methods=['GET','POST'])
 def get_humidity():
         pass
 
-@app.route('/lightintensity',method=['GET','POST'])
+@app.route('/lightintensity',methods=['GET','POST'])
 def get_light_intensity():
         pass
 
-@app.route('/carbondioxide',method=['GET','POST'])
+@app.route('/carbondioxide',methods=['GET','POST'])
 def get_CO2():
         pass
 
