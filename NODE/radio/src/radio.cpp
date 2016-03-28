@@ -1,4 +1,3 @@
-
 /**
    Line  From Arduino Pin  From Grid Position  To Radio Pin
     GND   GND                 U17                   1
@@ -15,8 +14,6 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include "printf.h"
-#include <Time.h>
-#include <TimeLib.h>
 
 // device radionya
 RF24 radio(9, 10);
@@ -25,7 +22,7 @@ RF24 radio(9, 10);
 #define ADDR_SINK 0x7fff
 
 // <p> paket radio
-# define PANJANG_PAKET 184/8
+# define PANJANG_PAKET 128/8
 
 // role dari node ini
 // TODO: masukkan ke file .h
@@ -36,8 +33,7 @@ typedef enum { NODE_SENSOR, NODE_SINK } node_t;
 typedef struct
 {
   uint8_t   header;
-  // timestamp dalam bentuk epoch UNIX, unsigned 32 bit
-  uint32_t   timestamp;
+  uint8_t   timestamp;
   uint16_t  addr_s;
   uint16_t  addr_t;
   // payload, data sensor
@@ -152,7 +148,7 @@ static void vTaskRoute(void* pvParam)
       {
         // kalau nggak, kirim paketnya sekarang
         // rawan chaos: tambahkan mutex di sini
-        while (!xSemaphoreTake(&sem_pckt, 0))
+        while(xSemaphoreTake(&sem_pckt, 0))
           ;
         pckt.addr_s = addr_saya;
         pckt.addr_t = ADDR_SINK;
@@ -201,19 +197,24 @@ static void vTaskRoute(void* pvParam)
         printf("yang ditangkep: "); cetakpaket(arr);
       }
     }
-}}
+  }
+}
 
 static void vTaskSvc(void* param)
 { while (1) {
     // task untuk menjalankan service (lapor ke server, monitor board,
     // execute command, dll)
     vTaskDelay(100);
-}}
+  }
+}
 
 void setup() {
+
   // dummy packet
   pckt = { .header    = 'h', // uint8_t header
            .timestamp = 't', // uint8_t timestamp
+           .addr_s    = 's' << 8 | 'z', // uint16_t addr_s
+           .addr_t    = 't' << 8 | 'g', // uint16_t addr_t
            .ts_c      = '1' << 8 | '2', // uint16_t ts_c
            .co2       = '9' << 8 | 'A', // uint16_t co2
            .hu        = 0x42434445LL, // uint32_t hu
@@ -238,6 +239,24 @@ void setup() {
   // debug print
   radio.printDetails();
 
+  // minta addr node ini
+  printf("MASUKKAN ADDR NODE INI: ");
+  for (char z = 1; z <= 4; z++)
+  {
+    char sc;
+    while (!Serial.available()) // tunggu sampai ada data masuk dari serial
+      ;
+    sc = Serial.read();
+    printf("%c", sc);
+    if (sc < 59) // ASCII '0'- '9'
+      addr_saya |= sc - '0';
+    else // asumsi inputan 'a'-'f', konversi ke hex
+      addr_saya |= sc - 'a' + 0xa;
+    if (z < 4)
+      addr_saya <<= 4;
+  }
+  printf("\n\rADDR: %4x\n\r", addr_saya);
+
   printf("TEKAN 'T' UNTUK MASUK KE SINK MODE, S UNTUK MASUK KE SENSOR MODE\n\r");
   char t = 0;
   while (t != 'T' && t != 'S')
@@ -251,48 +270,28 @@ void setup() {
   {
     printf("SAYA ADALAH SINK\n\r");
     node_type = NODE_SINK;
-    addr_saya = ADDR_SINK;
   }
   else if (t == 'S')
   {
     printf("SAYA ADALAH SOURCE\n\r");
     node_type = NODE_SENSOR;
-    
-    // minta addr node ini
-    printf("MASUKKAN ADDR NODE INI: ");
-    for (char z = 1; z <= 4; z++)
-    {
-      char sc;
-      while (!Serial.available()) // tunggu sampai ada data masuk dari serial
-        ;
-      sc = Serial.read();
-      printf("%c", sc);
-      if (sc < 59) // ASCII '0'- '9'
-        addr_saya |= sc - '0';
-      else // asumsi inputan 'a'-'f', konversi ke hex
-        addr_saya |= sc - 'a' + 0xa;
-      if (z < 4)
-        addr_saya <<= 4;
-    }
   }
-
-  printf("\n\rADDR: %4x\n\r", addr_saya);
-
   // init fungsi random() untuk random delay
   randomSeed(analogRead(0));
 
   // init mutex buat pckt
   sem_pckt = xSemaphoreCreateBinary();
-  if (sem_pckt == NULL)
+  if(sem_pckt == NULL)
   {
     Serial.println("sem_init gagal\n\r");
-    while (1) ;
+    while(1) ;
   }
+  
 
   // init RTOS
   xTaskCreate(vTaskRoute, "routing", configMINIMAL_STACK_SIZE + 250, NULL, 1, &task_route);
   xTaskCreate(vTaskSvc, "node_svc", configMINIMAL_STACK_SIZE, NULL, 1, &task_svc);
-  printf("JALAN\n\r");
+  printf("RUNNING TASK\n\r");
   vTaskStartScheduler();
 
   while (1)

@@ -6,7 +6,7 @@
 #include <SoftwareSerial.h>
 #include <cozir.h>
 #include <stdio.h>
-#include <time.h>
+//#include <time.h>
 
 SoftwareSerial sws(13,12);
 COZIR czr(&sws);
