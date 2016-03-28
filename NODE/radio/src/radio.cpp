@@ -33,18 +33,18 @@ typedef enum { NODE_SENSOR, NODE_SINK } node_t;
 typedef struct
 {
   uint8_t   header;
-  uint8_t   timestamp;
+  uint64_t   timestamp;
   uint16_t  addr_s;
   uint16_t  addr_t;
   // payload, data sensor
-  uint16_t  ts_c;
-  uint16_t  co2;
-  uint32_t  hu;
+  // warnung: konversi float* ke 4 x uint8*
+  float  ts_c;
+  float  co2;
+  float  hu;
   // data yang dikirimkan dari light sensor adalah data mentah 16 bit
   uint16_t  li;
   // ~payload, data sensor
   // crc 16 bit, data dihitung berdasarkan timestamp dan payload
-  uint16_t crc;
 } paket;
 
 /**
@@ -148,6 +148,7 @@ static void vTaskRoute(void* pvParam)
       {
         // kalau nggak, kirim paketnya sekarang
         // rawan chaos: tambahkan mutex di sini
+        // TODO: tambah flag untuk info data udah siap atau belum
         while(xSemaphoreTake(&sem_pckt, 0))
           ;
         pckt.addr_s = addr_saya;
@@ -212,14 +213,13 @@ void setup() {
 
   // dummy packet
   pckt = { .header    = 'h', // uint8_t header
-           .timestamp = 't', // uint8_t timestamp
+           .timestamp = 'k', // uint64_t timestamp
            .addr_s    = 's' << 8 | 'z', // uint16_t addr_s
            .addr_t    = 't' << 8 | 'g', // uint16_t addr_t
-           .ts_c      = '1' << 8 | '2', // uint16_t ts_c
-           .co2       = '9' << 8 | 'A', // uint16_t co2
-           .hu        = 0x42434445LL, // uint32_t hu
+           .ts_c      = '1' << 8 | '2', // float ts_c
+           .co2       = '9' << 8 | 'A', // float co2
+           .hu        = 0x42434445LL, // float hu
            .li        = 'F' << 8 | '0', // uint16_t li
-           .crc       = 'r' // uint8_t crc
          };
 
   Serial.begin(9600);
@@ -276,7 +276,7 @@ void setup() {
     }
   }
   // init fungsi random() untuk random delay
-  // randomSeed(analogRead(0));
+  randomSeed(analogRead(0));
 
   printf("\n\rADDR: %4x\n\r", addr_saya);
 
