@@ -22,7 +22,7 @@ RF24 radio(9, 10);
 #define ADDR_SINK 0x7fff
 
 // <p> paket radio
-# define PANJANG_PAKET 128/8
+# define PANJANG_PAKET 184/8
 
 // role dari node ini
 // TODO: masukkan ke file .h
@@ -239,24 +239,6 @@ void setup() {
   // debug print
   radio.printDetails();
 
-  // minta addr node ini
-  printf("MASUKKAN ADDR NODE INI: ");
-  for (char z = 1; z <= 4; z++)
-  {
-    char sc;
-    while (!Serial.available()) // tunggu sampai ada data masuk dari serial
-      ;
-    sc = Serial.read();
-    printf("%c", sc);
-    if (sc < 59) // ASCII '0'- '9'
-      addr_saya |= sc - '0';
-    else // asumsi inputan 'a'-'f', konversi ke hex
-      addr_saya |= sc - 'a' + 0xa;
-    if (z < 4)
-      addr_saya <<= 4;
-  }
-  printf("\n\rADDR: %4x\n\r", addr_saya);
-
   printf("TEKAN 'T' UNTUK MASUK KE SINK MODE, S UNTUK MASUK KE SENSOR MODE\n\r");
   char t = 0;
   while (t != 'T' && t != 'S')
@@ -270,14 +252,33 @@ void setup() {
   {
     printf("SAYA ADALAH SINK\n\r");
     node_type = NODE_SINK;
+    addr_saya = ADDR_SINK;
   }
   else if (t == 'S')
   {
     printf("SAYA ADALAH SOURCE\n\r");
     node_type = NODE_SENSOR;
+    // minta addr node ini
+    printf("MASUKKAN ADDR NODE INI: ");
+    for (char z = 1; z <= 4; z++)
+    {
+      char sc;
+      while (!Serial.available()) // tunggu sampai ada data masuk dari serial
+        ;
+      sc = Serial.read();
+      printf("%c", sc);
+      if (sc < 59) // ASCII '0'- '9'
+        addr_saya |= sc - '0';
+      else // asumsi inputan 'a'-'f', konversi ke hex
+        addr_saya |= sc - 'a' + 0xa;
+      if (z < 4)
+        addr_saya <<= 4;
+    }
   }
   // init fungsi random() untuk random delay
-  randomSeed(analogRead(0));
+  // randomSeed(analogRead(0));
+
+  printf("\n\rADDR: %4x\n\r", addr_saya);
 
   // init mutex buat pckt
   sem_pckt = xSemaphoreCreateBinary();
@@ -286,7 +287,6 @@ void setup() {
     Serial.println("sem_init gagal\n\r");
     while(1) ;
   }
-  
 
   // init RTOS
   xTaskCreate(vTaskRoute, "routing", configMINIMAL_STACK_SIZE + 250, NULL, 1, &task_route);
