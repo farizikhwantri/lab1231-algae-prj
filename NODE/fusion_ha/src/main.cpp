@@ -9,9 +9,21 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <SPI.h>
-#include "printf.h"
 
 //#include <time.h>
+
+// pengganti printf.h
+int serial_putc( char c, FILE * )
+{
+    Serial.write( c );
+    return c;
+}
+
+void printf_begin(void)
+{
+    fdevopen( &serial_putc, 0 );
+}
+// ~pengganti
 
 // objek device
 SoftwareSerial sws(13,12);
