@@ -49,7 +49,7 @@ typedef struct
 
 /**
    Konversi isi paket ke array. Dibutuhkan saat paket akan dikirim
-   Array yang dihasilkan dalam pola big endian
+   Array yang dihasilkan berpola big endian
    @param paket pc yang akan dikonversi ke array
    @param array arr yang akan diisi dari paket
    @return void
@@ -179,7 +179,7 @@ static void vTaskRoute(void* pvParam)
         {
           // ini paket yang mau saya kirim, keluar dari loop saat ini
           printf("paket ini sih punya saya "); cetakpaket(buf);
-          return;
+          continue;
         }
         // paket ini bukan dari saya dan bukan buat saya, forward ke node berikutnya
         printf("ada paket yang diterusin "); cetakpaket(buf);
@@ -223,8 +223,8 @@ void setup() {
          };
 
   Serial.begin(9600);
-  printf_begin();
 
+  printf_begin();
   radio.begin();
   radio.setDataRate(RF24_1MBPS);
   radio.setRetries(15, 15);
