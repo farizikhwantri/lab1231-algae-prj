@@ -342,6 +342,88 @@ void setup( void ){
   Serial.begin(9600);
   //czr.init();
 
+  // dummy packet
+  pckt = { .header    = 'h', // uint8_t header
+           .timestamp = 'k', // uint64_t timestamp
+           .addr_s    = 's' << 8 | 'z', // uint16_t addr_s
+           .addr_t    = 't' << 8 | 'g', // uint16_t addr_t
+           .ts_c      = '1' << 8 | '2', // float ts_c
+           .co2       = '9' << 8 | 'A', // float co2
+           .hu        = 0x42434445LL, // float hu
+           .li        = 'F' << 8 | '0', // uint16_t li
+         };
+
+  Serial.begin(9600);
+
+  printf_begin();
+  radio.begin();
+  radio.setDataRate(RF24_1MBPS);
+  radio.setRetries(15, 15);
+
+  radio.openWritingPipe(pipes[0]);
+  // listen di semua pipe
+  for (int i = 0; i < 6; i++)
+    radio.openReadingPipe(i + 1, pipes[i]);
+
+  // mulai listen
+  radio.startListening();
+  // debug print
+  radio.printDetails();
+
+  printf("TEKAN 'T' UNTUK MASUK KE SINK MODE, S UNTUK MASUK KE SENSOR MODE\n\r");
+  char t = 0;
+  while (t != 'T' && t != 'S')
+  {
+    while (!Serial.available())
+      ;
+    t = toUpperCase(Serial.read());
+  }
+  printf("%c\n\r", t);
+  if (t == 'T')
+  {
+    printf("SAYA ADALAH SINK\n\r");
+    node_type = NODE_SINK;
+    addr_saya = ADDR_SINK;
+  }
+  else if (t == 'S')
+  {
+    printf("SAYA ADALAH SOURCE\n\r");
+    node_type = NODE_SENSOR;
+    // minta addr node ini
+    printf("MASUKKAN ADDR NODE INI: ");
+    for (char z = 1; z <= 4; z++)
+    {
+      char sc;
+      while (!Serial.available()) // tunggu sampai ada data masuk dari serial
+        ;
+      sc = Serial.read();
+      printf("%c", sc);
+      if (sc < 59) // ASCII '0'- '9'
+        addr_saya |= sc - '0';
+      else // asumsi inputan 'a'-'f', konversi ke hex
+        addr_saya |= sc - 'a' + 0xa;
+      if (z < 4)
+        addr_saya <<= 4;
+    }
+  }
+  // init fungsi random() untuk random delay
+  randomSeed(analogRead(0));
+
+  printf("\n\rADDR: %4x\n\r", addr_saya);
+
+  // init mutex buat pckt
+  sem_pckt = xSemaphoreCreateBinary();
+  if(sem_pckt == NULL)
+  {
+    Serial.println("sem_init gagal\n\r");
+    while(1) ;
+  }
+
+  // init RTOS
+  xTaskCreate(vTaskRoute, "routing", configMINIMAL_STACK_SIZE + 250, NULL, 1, &task_route);
+  xTaskCreate(vTaskSvc, "node_svc", configMINIMAL_STACK_SIZE, NULL, 1, &task_svc);
+
+
   xTaskCreate( vTempReader, "TempReader", configMINIMAL_STACK_SIZE + 250, NULL, 1, &temp);
   xTaskCreate( vCO2Reader, "CO2Reader", 500, NULL, 1, &co2);
   xTaskCreate( vHumidityReader, "HumidityReader", configMINIMAL_STACK_SIZE + 100, NULL, 1, &hum);
