@@ -10,6 +10,10 @@
 #include <RF24.h>
 #include <SPI.h>
 
+// library udah dipindahin, include di sini
+#include "constants.h"
+#include "paket.h"
+
 //#include <time.h>
 
 // pengganti printf.h
@@ -145,35 +149,6 @@ static void vPrintTask ( void *pvParameter ){
 
 }
 
-// dummy sink addr
-#define ADDR_SINK 0x7fff
-
-// <p> paket radio
-# define PANJANG_PAKET 184/8
-
-// role dari node ini
-// TODO: masukkan ke file .h
-typedef enum { NODE_SENSOR, NODE_SINK } node_t;
-
-/* deskripsi paket */
-// TODO: masukkan ke file .h
-typedef struct
-{
-  uint8_t   header;
-  uint64_t   timestamp;
-  uint16_t  addr_s;
-  uint16_t  addr_t;
-  // payload, data sensor
-  // warnung: konversi float* ke 4 x uint8*
-  float  ts_c;
-  float  co2;
-  float  hu;
-  // data yang dikirimkan dari light sensor adalah data mentah 16 bit
-  uint16_t  li;
-  // ~payload, data sensor
-  // crc 16 bit, data dihitung berdasarkan timestamp dan payload
-} paket;
-
 
 /**
    Konversi isi paket ke array. Dibutuhkan saat paket akan dikirim
@@ -218,11 +193,11 @@ void parse(uint8_t paket_diterima[PANJANG_PAKET], paket* pc)
 
 // macro debug
 #define cetakpaket(paket)\
-  char* z = (char*)paket; while(z < (char*)paket + PANJANG_PAKET) printf("%c", *(z++)); printf("\n\r");
+  do { char* z = (char*)paket; while(z < (char*)paket + PANJANG_PAKET) printf("%c", *(z++)); printf("\n\r"); } while(0);
 
 /**
    fungsi untuk mengirim paket via radio
-   @param paket* alamat ke paket
+   @param paket* memory addr paket
    @return ok bernilai true jika pengiriman berhasil, false jika sebaliknya
 */
 bool kirim_paket(paket* paket_dikirim)
@@ -258,7 +233,6 @@ uint8_t buf[PANJANG_PAKET];
 node_t node_type;
 
 // address node ini
-// addr node 1 = 0xfa01 -> mega, node 2 = 0xfa03 -> uno, node sink = ADDR_SINK -> mega ADK, hard code manual ya huehuehue
 uint16_t addr_saya;
 
 // handle untuk task RTOS
@@ -275,13 +249,10 @@ static void vTaskRoute(void* pvParam)
       if (!radio.available())
       {
         // kalau nggak, kirim paketnya sekarang
-        // rawan chaos: tambahkan mutex di sini
+        // TODO: ini critical section, rawan chaos. tambahkan mutex di sini
         // TODO: tambah flag untuk info data udah siap atau belum
-        while(xSemaphoreTake(&sem_pckt, 0))
-          ;
         pckt.addr_s = addr_saya;
         pckt.addr_t = ADDR_SINK;
-        xSemaphoreGive(&sem_pckt);
         kirim_paket(&pckt);
       }
       else
@@ -303,15 +274,17 @@ static void vTaskRoute(void* pvParam)
           Serial.println("hore kita dapet paket "); cetakpaket(buf);
           ;
         }
-        if (addr_asal_paket == addr_saya)
+        else if (addr_asal_paket == addr_saya)
         {
           // ini paket yang mau saya kirim, keluar dari loop saat ini
           printf("paket ini sih punya saya "); cetakpaket(buf);
           continue;
         }
-        // paket ini bukan dari saya dan bukan buat saya, forward ke node berikutnya
-        printf("ada paket yang diterusin "); cetakpaket(buf);
-        radio.write(&buf, PANJANG_PAKET);
+        else // paket ini bukan dari saya dan bukan buat saya, forward ke node berikutnya
+        {
+          printf("ada paket yang diterusin "); cetakpaket(buf);
+          radio.write(&buf, PANJANG_PAKET);
+        }
       }
       delay_rand();
     }
@@ -343,15 +316,15 @@ void setup( void ){
   //czr.init();
 
   // dummy packet
-  pckt = { .header    = 'h', // uint8_t header
-           .timestamp = 'k', // uint64_t timestamp
-           .addr_s    = 's' << 8 | 'z', // uint16_t addr_s
-           .addr_t    = 't' << 8 | 'g', // uint16_t addr_t
-           .ts_c      = '1' << 8 | '2', // float ts_c
-           .co2       = '9' << 8 | 'A', // float co2
-           .hu        = 0x42434445LL, // float hu
-           .li        = 'F' << 8 | '0', // uint16_t li
-         };
+  // pckt = { .header    = 'h', // uint8_t header
+  //          .timestamp = 'k', // uint64_t timestamp
+  //          .addr_s    = 's' << 8 | 'z', // float_t addr_s
+  //          .addr_t    = 't' << 8 | 'g', // uint16_t addr_t
+  //          .ts_c      = '1' << 8 | '2', // float ts_c
+  //          .co2       = '9' << 8 | 'A', // float co2
+  //          .hu        = 0x42434445LL, // float hu
+  //          .li        = 'F' << 8 | '0', // uint16_t li
+  //        };
 
   Serial.begin(9600);
 
@@ -371,21 +344,21 @@ void setup( void ){
   radio.printDetails();
 
   printf("TEKAN 'T' UNTUK MASUK KE SINK MODE, S UNTUK MASUK KE SENSOR MODE\n\r");
-  char t = 0;
-  while (t != 'T' && t != 'S')
+  char typ = 0;
+  while (typ != 'T' && typ != 'S')
   {
     while (!Serial.available())
       ;
-    t = toUpperCase(Serial.read());
+    typ = toUpperCase(Serial.read());
   }
   printf("%c\n\r", t);
-  if (t == 'T')
+  if (typ == 'T')
   {
     printf("SAYA ADALAH SINK\n\r");
     node_type = NODE_SINK;
     addr_saya = ADDR_SINK;
   }
-  else if (t == 'S')
+  else if (typ == 'S')
   {
     printf("SAYA ADALAH SOURCE\n\r");
     node_type = NODE_SENSOR;
@@ -427,7 +400,7 @@ void setup( void ){
   xTaskCreate( vTempReader, "TempReader", configMINIMAL_STACK_SIZE + 250, NULL, 1, &temp);
   xTaskCreate( vCO2Reader, "CO2Reader", 500, NULL, 1, &co2);
   xTaskCreate( vHumidityReader, "HumidityReader", configMINIMAL_STACK_SIZE + 100, NULL, 1, &hum);
-  //xTaskCreate( vLightReader, "LightReader", 200, NULL, 2, &light);
+  // xTaskCreate( vLightReader, "LightReader", 200, NULL, 2, &light);
   xTaskCreate( vPrintTask, "PrintTask", 400, NULL, 1, &print);
 
   /*
