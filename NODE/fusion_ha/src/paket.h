@@ -1,5 +1,5 @@
-#ifndef PAKET
-#define PAKET
+#ifndef PAKET_H
+#define PAKET_H
 #endif
 
 #include <Arduino.h>
