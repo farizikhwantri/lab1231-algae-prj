@@ -172,7 +172,7 @@ static void vTaskRoute(void* pvParam)
           // apa yang mau dilakuin seandainya paket ini buat saya
           // misalnya ini perintah dari server atau informasi dari
           // tetangga
-          Serial.println("hore kita dapet paket "); cetakpaket(buf);
+          printf("hore kita dapet paket "); cetakpaket(buf);
           ;
         }
         if (addr_asal_paket == addr_saya)
