@@ -212,13 +212,10 @@ bool kirim_paket(paket* paket_dikirim)
 }
 
 /**
-   fungsi untuk random delay, bersifat blocking
+   macro untuk random delay, bersifat blocking
 */
-void delay_rand()
-{
-  char x = random(100); // delay antara 0 - 100 ms
-  delay(x);
-}
+#define random_delay()\
+  delay(random(100)); // delay antara 0 - 100 ms
 
 // paket dummy
 paket pckt;

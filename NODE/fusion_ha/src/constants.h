@@ -2,6 +2,8 @@
 #define CONSTANTS_H
 #endif
 
+#include "paket.h"
+
 /** role dari node radio saat ini */
 typedef enum { NODE_SENSOR, NODE_SINK } node_t;
 
