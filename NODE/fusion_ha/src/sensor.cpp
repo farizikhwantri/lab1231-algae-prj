@@ -1,4 +1,9 @@
-
+/**
+  sensor.cpp
+  Kode untuk di-upload ke node sensor yang mengirim data ke client
+  Copyright ___
+  version xx.xx
+*/
 /* Include FreeRTOS */
 #include "FreeRTOS_AVR.h"
 #include <Arduino.h>
@@ -10,24 +15,10 @@
 #include <RF24.h>
 #include <SPI.h>
 
-// library udah dipindahin, include di sini
-#include "constants.h"
-#include "paket.h"
-
 //#include <time.h>
 
-// pengganti printf.h
-int serial_putc( char c, FILE * )
-{
-    Serial.write( c );
-    return c;
-}
-
-void printf_begin(void)
-{
-    fdevopen( &serial_putc, 0 );
-}
-// ~pengganti
+#include "constants.h"
+#include "paket.h"
 
 // objek device
 SoftwareSerial sws(13,12);
@@ -150,54 +141,14 @@ static void vPrintTask ( void *pvParameter ){
 }
 
 
-/**
-   Konversi isi paket ke array. Dibutuhkan saat paket akan dikirim
-   Array yang dihasilkan berpola big endian
-   @param paket pc yang akan dikonversi ke array
-   @param array arr yang akan diisi dari paket
-   @return void
-*/
-void toarray(paket* pc, uint8_t paket_yang_dibalikin[PANJANG_PAKET])
-{
-  // the huehuehue of C/C++: point everything directly!
-  // cast pointer untuk menunjuk paket this
-  uint8_t* ptrc = (uint8_t*) pc;
-  uint8_t ctr = PANJANG_PAKET;
-  // lalu copy isi paket yang ditunjuk pointer ke array
-  while (ctr)
-  {
-    paket_yang_dibalikin[--ctr] = *(ptrc + ctr);
-  }
-}
-
-/**
-   Parse array yang diterima dari radio jadi paket ke this
-   Array yang diterima sesuai urutan paket dalam pola big endian
-   @param array yang akan dijadikan paket
-   @param paket hasil keluaran
-   @return void
-*/
-void parse(uint8_t paket_diterima[PANJANG_PAKET], paket* pc)
-{
-  // the xaxaxa of C/C++, point everything directly!
-  // cast pointer untuk menunjuk paket
-  uint8_t* ptrc = (uint8_t*) pc;
-  uint8_t ctr = PANJANG_PAKET;
-  // lalu copy isi array yang ditunjuk pointer ke paket
-  while (ctr)
-  {
-    *(ptrc + --ctr) = paket_diterima[ctr];
-  }
-}
-// </p> paket radio
 
 // macro debug
 #define cetakpaket(paket)\
-  do { char* z = (char*)paket; while(z < (char*)paket + PANJANG_PAKET) printf("%c", *(z++)); printf("\n\r"); } while(0);
+  char* z = (char*)paket; while(z < (char*)paket + PANJANG_PAKET) printf("%c", *(z++)); printf("\n\r");
 
 /**
    fungsi untuk mengirim paket via radio
-   @param paket* memory addr paket
+   @param paket* alamat ke paket
    @return ok bernilai true jika pengiriman berhasil, false jika sebaliknya
 */
 bool kirim_paket(paket* paket_dikirim)
@@ -212,10 +163,9 @@ bool kirim_paket(paket* paket_dikirim)
 }
 
 /**
-   macro untuk random delay, bersifat blocking
+   fungsi untuk random delay, bersifat blocking
 */
-#define random_delay()\
-  delay(random(100)); // delay antara 0 - 100 ms
+#define delay_rand() delay(random(100))
 
 // paket dummy
 paket pckt;
@@ -230,6 +180,7 @@ uint8_t buf[PANJANG_PAKET];
 node_t node_type;
 
 // address node ini
+// addr node 1 = 0xfa01 -> mega, node 2 = 0xfa03 -> uno, node sink = ADDR_SINK -> mega ADK, hard code manual ya huehuehue
 uint16_t addr_saya;
 
 // handle untuk task RTOS
@@ -246,10 +197,12 @@ static void vTaskRoute(void* pvParam)
       if (!radio.available())
       {
         // kalau nggak, kirim paketnya sekarang
-        // TODO: ini critical section, rawan chaos. tambahkan mutex di sini
+        // rawan chaos: tambahkan mutex di sini
         // TODO: tambah flag untuk info data udah siap atau belum
+
         pckt.addr_s = addr_saya;
         pckt.addr_t = ADDR_SINK;
+
         kirim_paket(&pckt);
       }
       else
@@ -271,17 +224,15 @@ static void vTaskRoute(void* pvParam)
           Serial.println("hore kita dapet paket "); cetakpaket(buf);
           ;
         }
-        else if (addr_asal_paket == addr_saya)
+        if (addr_asal_paket == addr_saya)
         {
           // ini paket yang mau saya kirim, keluar dari loop saat ini
           printf("paket ini sih punya saya "); cetakpaket(buf);
           continue;
         }
-        else // paket ini bukan dari saya dan bukan buat saya, forward ke node berikutnya
-        {
-          printf("ada paket yang diterusin "); cetakpaket(buf);
-          radio.write(&buf, PANJANG_PAKET);
-        }
+        // paket ini bukan dari saya dan bukan buat saya, forward ke node berikutnya
+        printf("ada paket yang diterusin "); cetakpaket(buf);
+        radio.write(&buf, PANJANG_PAKET);
       }
       delay_rand();
     }
@@ -303,7 +254,16 @@ static void vTaskSvc(void* param)
 { while (1) {
     // task untuk menjalankan service (lapor ke server, monitor board,
     // execute command, dll)
-    vTaskDelay(100);
+    if(Serial.available())
+    {
+      printf("TEKAN S UNTUK MELAKUKAN PENGATURAN");
+      char input = 0;
+      while(input != 'S')
+      {
+        input = toupper(Serial.read());
+      }
+    }
+    vTaskDelay(50);
   }
 }
 
@@ -312,99 +272,15 @@ void setup( void ){
   Serial.begin(9600);
   //czr.init();
 
-  // dummy packet
-  // pckt = { .header    = 'h', // uint8_t header
-  //          .timestamp = 'k', // uint64_t timestamp
-  //          .addr_s    = 's' << 8 | 'z', // float_t addr_s
-  //          .addr_t    = 't' << 8 | 'g', // uint16_t addr_t
-  //          .ts_c      = '1' << 8 | '2', // float ts_c
-  //          .co2       = '9' << 8 | 'A', // float co2
-  //          .hu        = 0x42434445LL, // float hu
-  //          .li        = 'F' << 8 | '0', // uint16_t li
-  //        };
-
-  Serial.begin(9600);
-
-  printf_begin();
-  radio.begin();
-  radio.setDataRate(RF24_1MBPS);
-  radio.setRetries(15, 15);
-
-  radio.openWritingPipe(pipes[0]);
-  // listen di semua pipe
-  for (int i = 0; i < 6; i++)
-    radio.openReadingPipe(i + 1, pipes[i]);
-
-  // mulai listen
-  radio.startListening();
-  // debug print
-  radio.printDetails();
-
-  printf("TEKAN 'T' UNTUK MASUK KE SINK MODE, S UNTUK MASUK KE SENSOR MODE\n\r");
-  char typ = 0;
-  while (typ != 'T' && typ != 'S')
-  {
-    while (!Serial.available())
-      ;
-    typ = toUpperCase(Serial.read());
-  }
-  printf("%c\n\r", t);
-  if (typ == 'T')
-  {
-    printf("SAYA ADALAH SINK\n\r");
-    node_type = NODE_SINK;
-    addr_saya = ADDR_SINK;
-  }
-  else if (typ == 'S')
-  {
-    printf("SAYA ADALAH SOURCE\n\r");
-    node_type = NODE_SENSOR;
-    // minta addr node ini
-    printf("MASUKKAN ADDR NODE INI: ");
-    for (char z = 1; z <= 4; z++)
-    {
-      char sc;
-      while (!Serial.available()) // tunggu sampai ada data masuk dari serial
-        ;
-      sc = Serial.read();
-      printf("%c", sc);
-      if (sc < 59) // ASCII '0'- '9'
-        addr_saya |= sc - '0';
-      else // asumsi inputan 'a'-'f', konversi ke hex
-        addr_saya |= sc - 'a' + 0xa;
-      if (z < 4)
-        addr_saya <<= 4;
-    }
-  }
-  // init fungsi random() untuk random delay
-  randomSeed(analogRead(0));
-
-  printf("\n\rADDR: %4x\n\r", addr_saya);
-
-  // init mutex buat pckt
-  sem_pckt = xSemaphoreCreateBinary();
-  if(sem_pckt == NULL)
-  {
-    Serial.println("sem_init gagal\n\r");
-    while(1) ;
-  }
-
-  // init RTOS
-  xTaskCreate(vTaskRoute, "routing", configMINIMAL_STACK_SIZE + 250, NULL, 1, &task_route);
-  xTaskCreate(vTaskSvc, "node_svc", configMINIMAL_STACK_SIZE, NULL, 1, &task_svc);
-
-
   xTaskCreate( vTempReader, "TempReader", configMINIMAL_STACK_SIZE + 250, NULL, 1, &temp);
   xTaskCreate( vCO2Reader, "CO2Reader", 500, NULL, 1, &co2);
   xTaskCreate( vHumidityReader, "HumidityReader", configMINIMAL_STACK_SIZE + 100, NULL, 1, &hum);
-  // xTaskCreate( vLightReader, "LightReader", 200, NULL, 2, &light);
+  //xTaskCreate( vLightReader, "LightReader", 200, NULL, 2, &light);
   xTaskCreate( vPrintTask, "PrintTask", 400, NULL, 1, &print);
 
-  /*
-  * UNCOMMENT TO VIEW AMOUNT OF FREE HEAP LEFT
   Serial.print(F("Free Heap: "));
   Serial.print(freeHeap());
-  */
+
   vTaskStartScheduler();
   //Serial.print(czr.ReadAutoCalibration());
 
@@ -415,4 +291,6 @@ void setup( void ){
 
 }
 //------------------------------------------------------------------------------
-void loop() {}
+void loop() {
+
+}

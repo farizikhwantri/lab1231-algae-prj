@@ -2,8 +2,6 @@
 #define CONSTANTS_H
 #endif
 
-#include "paket.h"
-
 /** role dari node radio saat ini */
 typedef enum { NODE_SENSOR, NODE_SINK } node_t;
 
@@ -28,7 +26,3 @@ typedef enum { NODE_SENSOR, NODE_SINK } node_t;
 */
 #define FLAG_REQ_ACK  0b10000000
 /**************************************/
-/**
-  minta ack balik dari penerima paket
-*/
-#define FLAG_REQ_ACK  0b10000000

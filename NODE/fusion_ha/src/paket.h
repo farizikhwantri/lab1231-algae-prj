@@ -8,11 +8,10 @@
 #define PANJANG_PAKET 184/4
 
 /* deskripsi paket */
-// TODO: masukkan ke file .h
 typedef struct
 {
   uint8_t   header;
-  uint64_t   timestamp;
+  uint64_t  timestamp;
   uint16_t  addr_s;
   uint16_t  addr_t;
   // payload, data sensor
@@ -43,4 +42,3 @@ void toarray(paket* pc, uint8_t paket_yang_dibalikin[PANJANG_PAKET]);
    @return void
 */
 void parse(uint8_t paket_diterima[PANJANG_PAKET], paket* pc);
-// </p> paket radio
