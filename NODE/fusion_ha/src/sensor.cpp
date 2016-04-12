@@ -14,6 +14,7 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <SPI.h>
+#include <EEPROM.h>
 
 //#include <time.h>
 
@@ -191,62 +192,50 @@ SemaphoreHandle_t sem_pckt;
 
 static void vTaskRoute(void* pvParam)
 { while (1) {
-    if (node_type == NODE_SENSOR)
+    // apa ada paket yang mau masuk?
+    if (!radio.available())
     {
-      // apa ada paket yang mau masuk?
-      if (!radio.available())
-      {
-        // kalau nggak, kirim paketnya sekarang
-        // rawan chaos: tambahkan mutex di sini
-        // TODO: tambah flag untuk info data udah siap atau belum
+      // kalau nggak, kirim paketnya sekarang
+      // rawan chaos: tambahkan mutex di sini
+      // TODO: tambah flag untuk info data udah siap atau belum
 
-        pckt.addr_s = addr_saya;
-        pckt.addr_t = ADDR_SINK;
+      pckt.addr_s = addr_saya;
+      pckt.addr_t = ADDR_SINK;
 
-        kirim_paket(&pckt);
-      }
-      else
-      {
-        // tahan, ada paket masuk
-        bool done = false;
-        while (!done)
-        {
-          done = radio.read(&buf, PANJANG_PAKET);
-        }
-        // liat alamatnya, buat kita apa bukan?
-        uint16_t addr_tujuan_paket = buf[5] << 8 | buf[4];
-        uint16_t addr_asal_paket = buf[3] << 8 | buf[2];
-        if (addr_tujuan_paket == addr_saya)
-        {
-          // apa yang mau dilakuin seandainya paket ini buat saya
-          // misalnya ini perintah dari server atau informasi dari
-          // tetangga
-          Serial.println("hore kita dapet paket "); cetakpaket(buf);
-          ;
-        }
-        if (addr_asal_paket == addr_saya)
-        {
-          // ini paket yang mau saya kirim, keluar dari loop saat ini
-          printf("paket ini sih punya saya "); cetakpaket(buf);
-          continue;
-        }
-        // paket ini bukan dari saya dan bukan buat saya, forward ke node berikutnya
-        printf("ada paket yang diterusin "); cetakpaket(buf);
-        radio.write(&buf, PANJANG_PAKET);
-      }
-      delay_rand();
+      kirim_paket(&pckt);
     }
     else
     {
+      // tahan, ada paket masuk
       bool done = false;
-      uint8_t arr[PANJANG_PAKET];
-      if (radio.available())
+      while (!done)
       {
-        while (!done)
-          done = radio.read(&arr, PANJANG_PAKET);
-        printf("yang ditangkep: "); cetakpaket(arr);
+        done = radio.read(&buf, PANJANG_PAKET);
+      }
+      // liat alamatnya, buat kita apa bukan?
+      uint16_t addr_tujuan_paket = buf[5] << 8 | buf[4];
+      uint16_t addr_asal_paket = buf[3] << 8 | buf[2];
+      if (addr_tujuan_paket == addr_saya)
+      {
+        // apa yang mau dilakuin seandainya paket ini buat saya
+        // misalnya ini perintah dari server atau informasi dari
+        // tetangga
+        Serial.println("hore kita dapet paket "); cetakpaket(buf);
+        ;
+      }
+      else if (addr_asal_paket == addr_saya)
+      {
+        // ini paket yang mau saya kirim, keluar dari loop saat ini
+        printf("paket ini sih punya saya "); cetakpaket(buf);
+      }
+      // paket ini bukan dari saya dan bukan buat saya, forward ke node berikutnya
+      else
+      {
+        printf("ada paket yang diterusin "); cetakpaket(buf);
+        radio.write(&buf, PANJANG_PAKET);
       }
     }
+    vTaskDelay(20);
   }
 }
 
@@ -277,9 +266,33 @@ void setup( void ){
   xTaskCreate( vHumidityReader, "HumidityReader", configMINIMAL_STACK_SIZE + 100, NULL, 1, &hum);
   //xTaskCreate( vLightReader, "LightReader", 200, NULL, 2, &light);
   xTaskCreate( vPrintTask, "PrintTask", 400, NULL, 1, &print);
+  xTaskCreate(vTaskRoute, "Task routing", configMINIMAL_STACK_SIZE + 150, NULL, 1, &task_route);
+  xTaskCreate(vTaskSvc, "Task service", configMINIMAL_STACK_SIZE, NULL, 1, &task_svc);
 
   Serial.print(F("Free Heap: "));
   Serial.print(freeHeap());
+
+  // inisialisasi perangkat
+  radio.begin();
+  radio.setDataRate(RF24_1MBPS);
+  radio.setRetries(15, 15);
+
+  radio.openWritingPipe(pipes[0]);
+  // listen di semua pipe
+  for (int i = 0; i < 6; i++)
+    radio.openReadingPipe(i + 1, pipes[i]);
+
+  // mulai listen
+  radio.startListening();
+  // debug print
+  radio.printDetails();
+
+  // ambil address sekarang dari EEPROM
+  EEPROM.begin();
+  addr_saya = EEPROM.read(EEPROM_ADDR_NODE_UPPER) << 8 |
+      EEPROM.read(EEPROM_ADDR_NODE_LOWER);
+  printf("ADDR SAYA: %4x\n\r", addr_saya);
+  // end inisialisasi radio
 
   vTaskStartScheduler();
   //Serial.print(czr.ReadAutoCalibration());

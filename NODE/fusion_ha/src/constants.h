@@ -2,6 +2,13 @@
 #define CONSTANTS_H
 #endif
 
+/**
+  alamat EEPROM untuk address yang sudah di-hardcode
+  */
+#define EEPROM_ADDR_NODE_UPPER 0xfffe
+#define EEPROM_ADDR_NODE_LOWER 0xffff
+/*****************************************************/
+
 /** role dari node radio saat ini */
 typedef enum { NODE_SENSOR, NODE_SINK } node_t;
 

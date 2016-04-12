@@ -27,7 +27,7 @@ void setup() {
     if (z < 4)
       addr <<= 4;
   }
-  Serial.print("address = ");
+  Serial.print("\n\r1address = ");
   Serial.print(addr, HEX);
   Serial.print("\r\n");
   uint8_t* p = (uint8_t*) &addr;
@@ -45,12 +45,12 @@ void setup() {
   EEPROM.write(EEPROM_ADDR_NODE_LOWER, addr_arr[0]);
   Serial.write("HASIL BACA EEPROM = ");
   uint8_t a1, a2;
-  Serial.write(a1=EEPROM.read(EEPROM_ADDR_NODE_UPPER), HEX);
-  Serial.write(a2=EEPROM.read(EEPROM_ADDR_NODE_LOWER), HEX);
+  Serial.print(a1=EEPROM.read(EEPROM_ADDR_NODE_UPPER), HEX);
+  Serial.print(a2=EEPROM.read(EEPROM_ADDR_NODE_LOWER), HEX);
   if(a1 == addr_arr[1] && a2 == addr_arr[0])
-    Serial.write("\n\rPEMBAKARAN SUKSES\n\r");
+    Serial.print("\n\rPEMBAKARAN SUKSES\n\r");
   else
-    Serial.write("\n\rTERJADI KESALAHAN\n\r");
+    Serial.print("\n\rTERJADI KESALAHAN\n\r");
 }
 
 void loop() {
